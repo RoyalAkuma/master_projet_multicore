@@ -3,6 +3,8 @@
 
   Interval data type with double precision bounds. Only implements
   operators for the evaluation of polynomials in interval arithmetic.
+   
+ 
 
   See:
   Interval analysis. Ramon Moore. Prentice-Hall, 1966.

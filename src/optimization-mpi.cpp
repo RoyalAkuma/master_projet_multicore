@@ -2,7 +2,7 @@
   Branch and bound algorithm to find the minimum of continuous binary 
   functions using interval arithmetic.
 
-  mpi version
+	MPI version
 
   Author: Joachim Clayton <Robert.Clayton@univ-nantes.fr>
   v. 1.0, 2016-02-09
@@ -22,33 +22,15 @@
 using namespace std;
 
 
+/* 
+ * Split a 2D box into four subboxes by splitting each dimension
+ * into two equal subparts
+ * -------------------------------------------------------------
+ * Division d'un carré en quatre carré de valeur égale;
+ * 
+*/
 
 
-int numprocs, rank, namelen;
-char processor_name[MPI_MAX_PROCESSOR_NAME];
-
-MPI_Init(&argc, &argv);
-
-MPI_Comm_size(MPI_COMM_WORLD, &numprocs);
-MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-MPI_Get_processor_name(processor_name, &namelen);
-
-
-
-MPI_Finalize();
-
-
-
-
-
-
-
-
-
-
-
-// Split a 2D box into four subboxes by splitting each dimension
-// into two equal subparts
 void split_box(const interval& x, const interval& y,
 	       interval &xl, interval& xr, interval& yl, interval& yr)
 {
@@ -61,28 +43,33 @@ void split_box(const interval& x, const interval& y,
 }
 
 // Branch-and-bound minimization algorithm
-void minimize(itvfun f,  // Function to minimize
-	      const interval& x, // Current bounds for 1st dimension
-	      const interval& y, // Current bounds for 2nd dimension
-	      double threshold,  // Threshold at which we should stop splitting
-	      double& min_ub,  // Current minimum upper bound
-	      minimizer_list& ml) // List of current minimizers
+
+void minimize(itvfun f,  // Function to minimize ---- fonction à minimiser
+	      const interval& x, // Current bounds for 1st dimension -------- bornes de la 1er dimension
+	      const interval& y, // Current bounds for 2nd dimension -------- bornes pour la 2eme
+	      double threshold,  // Threshold at which we should stop splitting ------- seuil ou on arrete le découpage
+	      double& min_ub,  // Current minimum upper bound---------------- minimum de la borne suppérieur
+	      minimizer_list& ml) // List of current minimizers-------------- liste des minimizers actuel
 {
   interval fxy = f(x,y);
   
-  if (fxy.left() > min_ub) { // Current box cannot contain minimum?
+  if (fxy.left() > min_ub) { // Current box cannot contain minimum? ---- si l'interval ne contient pas le minimum
     return ;
   }
 
-  if (fxy.right() < min_ub) { // Current box contains a new minimum?
+  if (fxy.right() < min_ub) { // Current box contains a new minimum? --- si l'interval contient le minimum
     min_ub = fxy.right();
-    // Discarding all saved boxes whose minimum lower bound is 
-    // greater than the new minimum upper bound
+    /* Discarding all saved boxes whose minimum lower bound is 
+     * greater than the new minimum upper bound
+     * ------------------------------------------------------------
+     * Nettoyage de la liste des minimum  suppérieur à fxy.right() et ce dernier devient le min_ub
+    */
+    
     auto discard_begin = ml.lower_bound(minimizer{0,0,min_ub,0});
     ml.erase(discard_begin,ml.end());
   }
 
-  // Checking whether the input box is small enough to stop searching.
+  // Checking whether the input box is small enough to stop searching. ----
   // We can consider the width of one dimension only since a box
   // is always split equally along both dimensions
   if (x.width() <= threshold) { 
@@ -103,19 +90,43 @@ void minimize(itvfun f,  // Function to minimize
 }
 
 
-int main(void)
-{
-  cout.precision(16);
+
+int main(argc, argv[]){
+	
+int numprocs, rank, namelen;
+char processor_name[MPI_MAX_PROCESSOR_NAME];
+
+MPI_Init(&argc, &argv);
+
+MPI_Comm_size(MPI_COMM_WORLD, &numprocs);
+MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+MPI_Get_processor_name(processor_name, &namelen);
+
+
+
+
+
+
+cout.precision(16);
+
   // By default, the currently known upper bound for the minimizer is +oo
+  // upper bound par defaut ; l'infini
+
   double min_ub = numeric_limits<double>::infinity();
+
   // List of potential minimizers. They may be removed from the list
   // if we later discover that their smallest minimum possible is 
   // greater than the new current upper bound
+  
+  
   minimizer_list minimums;
+  
   // Threshold at which we should stop splitting a box
+  
   double precision;
 
   // Name of the function to optimize
+  
   string choice_fun;
 
   // The information on the function chosen (pointer and initial box)
@@ -132,26 +143,3 @@ int main(void)
     for (auto fname : functions) {
       cout << fname.first << " ";
     }
-    cout << endl;
-    cin >> choice_fun;
-    
-    try {
-      fun = functions.at(choice_fun);
-    } catch (out_of_range) {
-      cerr << "Bad choice" << endl;
-      good_choice = false;
-    }
-  } while(!good_choice);
-
-  // Asking for the threshold below which a box is not split further
-  cout << "Precision? ";
-  cin >> precision;
-  
-  minimize(fun.f,fun.x,fun.y,precision,min_ub,minimums);
-  
-  // Displaying all potential minimizers
-  copy(minimums.begin(),minimums.end(),
-       ostream_iterator<minimizer>(cout,"\n"));    
-  cout << "Number of minimizers: " << minimums.size() << endl;
-  cout << "Upper bound for minimum: " << min_ub << endl;
-}
