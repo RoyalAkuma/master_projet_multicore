@@ -170,9 +170,9 @@ int main(void)
   cout << "Number of minimizers: " << minimums.size() << endl;
   cout << "Upper bound for minimum: " << min_ub << endl;
 
-	cout << "Temps: "
+	cout << "Temps d'execution : "
 	     << chrono::duration_cast<chrono::seconds>(fin_chrono - debut_chrono).count()
-			 << ":";
+			 << ",";
 	cout << chrono::duration_cast<chrono::microseconds>(fin_chrono - debut_chrono).count()
-			 << "secondes" << endl;
+			 <<	" s" << endl;
 }
