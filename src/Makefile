@@ -7,7 +7,7 @@
 #
 # ChangeLog:
 # Added path to Boost headers
-# Added variable BINROOT 
+# Added variable BINROOT
 .PHONY: clean
 
 BINROOT=/comptes/goualard-f/local/bin
@@ -20,7 +20,7 @@ CXXFLAGS = -std=gnu++0x -Wall -fopenmp -I/comptes/goualard-f/local/include
 MPICXX = $(BINROOT)/mpic++
 
 
-all: optimization-seq optimization-mpi
+all: optimization-seq optimization-mpi optimization-omp
 
 optimization-seq: optimization-seq.cpp $(COMMON_OBJECTS)
 	$(CXX) $(CXXFLAGS) -o $@ $< $(COMMON_OBJECTS) -lm
@@ -28,8 +28,11 @@ optimization-seq: optimization-seq.cpp $(COMMON_OBJECTS)
 optimization-mpi: optimization-mpi.cpp $(COMMON_OBJECTS)
 	$(MPICXX) $(CXXFLAGS) -fopenmp -o $@ $< $(COMMON_OBJECTS) -lm
 
+optimization-omp: optimization-omp.cpp $(COMMON_OBJECTS)
+		$(CXX) $(CXXFLAGS) -o $@ $< $(COMMON_OBJECTS) -lm
+
 $(COMMON_OBJECTS): %.o: %.cpp %.h
 
 
 clean:
-	-rm optimization-seq optimization-mpi $(COMMON_OBJECTS)
+	-rm optimization-seq optimization-mpi optimization-omp $(COMMON_OBJECTS)
