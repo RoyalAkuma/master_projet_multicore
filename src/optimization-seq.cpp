@@ -1,5 +1,5 @@
 /*
-  Branch and bound algorithm to find the minimum of continuous binary 
+  Branch and bound algorithm to find the minimum of continuous binary
   functions using interval arithmetic.
 
   Sequential version
@@ -16,6 +16,7 @@
 #include "functions.h"
 #include "minimizer.h"
 
+#include <chrono>
 using namespace std;
 
 
@@ -41,14 +42,14 @@ void minimize(itvfun f,  // Function to minimize
 	      minimizer_list& ml) // List of current minimizers
 {
   interval fxy = f(x,y);
-  
+
   if (fxy.left() > min_ub) { // Current box cannot contain minimum?
     return ;
   }
 
   if (fxy.right() < min_ub) { // Current box contains a new minimum?
     min_ub = fxy.right();
-    // Discarding all saved boxes whose minimum lower bound is 
+    // Discarding all saved boxes whose minimum lower bound is
     // greater than the new minimum upper bound
     auto discard_begin = ml.lower_bound(minimizer{0,0,min_ub,0});
     ml.erase(discard_begin,ml.end());
@@ -57,7 +58,7 @@ void minimize(itvfun f,  // Function to minimize
   // Checking whether the input box is small enough to stop searching.
   // We can consider the width of one dimension only since a box
   // is always split equally along both dimensions
-  if (x.width() <= threshold) { 
+  if (x.width() <= threshold) {
     // We have potentially a new minimizer
     ml.insert(minimizer{x,y,fxy.left(),fxy.right()});
     return ;
@@ -81,7 +82,7 @@ int main(void)
   // By default, the currently known upper bound for the minimizer is +oo
   double min_ub = numeric_limits<double>::infinity();
   // List of potential minimizers. They may be removed from the list
-  // if we later discover that their smallest minimum possible is 
+  // if we later discover that their smallest minimum possible is
   // greater than the new current upper bound
   minimizer_list minimums;
   // Threshold at which we should stop splitting a box
@@ -92,7 +93,7 @@ int main(void)
 
   // The information on the function chosen (pointer and initial box)
   opt_fun_t fun;
-  
+
   bool good_choice;
 
   // Asking the user for the name of the function to optimize
@@ -106,7 +107,7 @@ int main(void)
     }
     cout << endl;
     cin >> choice_fun;
-    
+
     try {
       fun = functions.at(choice_fun);
     } catch (out_of_range) {
@@ -118,12 +119,20 @@ int main(void)
   // Asking for the threshold below which a box is not split further
   cout << "Precision? ";
   cin >> precision;
-  
+
+	auto debut_chrono = chrono::high_resolution_clock::now();
   minimize(fun.f,fun.x,fun.y,precision,min_ub,minimums);
-  
+	auto fin_chrono = chrono::high_resolution_clock::now();
   // Displaying all potential minimizers
   copy(minimums.begin(),minimums.end(),
-       ostream_iterator<minimizer>(cout,"\n"));    
+       ostream_iterator<minimizer>(cout,"\n"));
   cout << "Number of minimizers: " << minimums.size() << endl;
   cout << "Upper bound for minimum: " << min_ub << endl;
+
+
+	cout << "Temps: "
+			 << chrono::duration_cast<chrono::seconds>(fin_chrono - debut_chrono).count()
+			 << ":";
+	cout << chrono::duration_cast<chrono::microseconds>(fin_chrono - debut_chrono).count()
+			 << "  secondes" << endl;
 }

@@ -17,8 +17,8 @@
 #include "minimizer.h"
 
 #include <omp.h>
-#include <mpi.h>
 
+#include <chrono>
 using namespace std;
 
 
@@ -51,6 +51,10 @@ void minimize(itvfun f,  // Function to minimize ---- fonction à minimiser
 	      double& min_ub,  // Current minimum upper bound---------------- minimum de la borne suppérieur
 	      minimizer_list& ml) // List of current minimizers-------------- liste des minimizers actuel
 {
+
+
+	omp_set_num_threads(4);
+
   interval fxy = f(x,y);
 
   if (fxy.left() > min_ub) { // Current box cannot contain minimum? ---- si l'interval ne contient pas le minimum
@@ -58,24 +62,31 @@ void minimize(itvfun f,  // Function to minimize ---- fonction à minimiser
   }
 
   if (fxy.right() < min_ub) { // Current box contains a new minimum? --- si l'interval contient le minimum
-    min_ub = fxy.right();
-    /* Discarding all saved boxes whose minimum lower bound is
+
+
+		/* Discarding all saved boxes whose minimum lower bound is
      * greater than the new minimum upper bound
      * ------------------------------------------------------------
      * Nettoyage de la liste des minimum  suppérieur à fxy.right() et ce dernier devient le min_ub
     */
 
+
+		#pragma omp critical
+		{
+		min_ub = fxy.right();
     auto discard_begin = ml.lower_bound(minimizer{0,0,min_ub,0});
-    ml.erase(discard_begin,ml.end());
-  }
+		ml.erase(discard_begin,ml.end());
+		}
+	}
 
   // Checking whether the input box is small enough to stop searching. ----
   // We can consider the width of one dimension only since a box
   // is always split equally along both dimensions
   if (x.width() <= threshold) {
     // We have potentially a new minimizer
-    ml.insert(minimizer{x,y,fxy.left(),fxy.right()});
-    return ;
+		#pragma omp critical
+		ml.insert(minimizer{x,y,fxy.left(),fxy.right()});
+		return ;
   }
 
   // The box is still large enough => we split it into 4 sub-boxes
@@ -83,50 +94,41 @@ void minimize(itvfun f,  // Function to minimize ---- fonction à minimiser
   interval xl, xr, yl, yr;
   split_box(x,y,xl,xr,yl,yr);
 
-  minimize(f,xl,yl,threshold,min_ub,ml);
-  minimize(f,xl,yr,threshold,min_ub,ml);
-  minimize(f,xr,yl,threshold,min_ub,ml);
-  minimize(f,xr,yr,threshold,min_ub,ml);
+	#pragma omp parallel sections
+	{
+		#pragma omp section
+		{
+  	minimize(f,xl,yl,threshold,min_ub,ml);
+		}
+		#pragma omp section
+  	{
+		minimize(f,xl,yr,threshold,min_ub,ml);
+		}
+		#pragma omp section
+  	{
+		minimize(f,xr,yl,threshold,min_ub,ml);
+		}
+		#pragma omp section
+  	{
+		minimize(f,xr,yr,threshold,min_ub,ml);
+		}
+	}
+
 }
 
-
-
-int main(int argc, char* argv[]){
-
-int numprocs, rank, namelen;
-char processor_name[MPI_MAX_PROCESSOR_NAME];
-
-MPI_Init(&argc, &argv);
-
-MPI_Comm_size(MPI_COMM_WORLD, &numprocs);
-MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-MPI_Get_processor_name(processor_name, &namelen);
-
-
-
-
-
-
-cout.precision(16);
-
+int main(void)
+{
+  cout.precision(16);
   // By default, the currently known upper bound for the minimizer is +oo
-  // upper bound par defaut ; l'infini
-
   double min_ub = numeric_limits<double>::infinity();
-
   // List of potential minimizers. They may be removed from the list
   // if we later discover that their smallest minimum possible is
   // greater than the new current upper bound
-
-
   minimizer_list minimums;
-
   // Threshold at which we should stop splitting a box
-
   double precision;
 
   // Name of the function to optimize
-
   string choice_fun;
 
   // The information on the function chosen (pointer and initial box)
@@ -143,7 +145,7 @@ cout.precision(16);
     for (auto fname : functions) {
       cout << fname.first << " ";
     }
-		cout << endl;
+    cout << endl;
     cin >> choice_fun;
 
     try {
@@ -158,11 +160,19 @@ cout.precision(16);
   cout << "Precision? ";
   cin >> precision;
 
+	auto debut_chrono = chrono::high_resolution_clock::now();
   minimize(fun.f,fun.x,fun.y,precision,min_ub,minimums);
+	auto fin_chrono = chrono::high_resolution_clock::now();
 
   // Displaying all potential minimizers
   copy(minimums.begin(),minimums.end(),
        ostream_iterator<minimizer>(cout,"\n"));
   cout << "Number of minimizers: " << minimums.size() << endl;
   cout << "Upper bound for minimum: " << min_ub << endl;
+
+	cout << "Temps: "
+	     << chrono::duration_cast<chrono::seconds>(fin_chrono - debut_chrono).count()
+			 << ":";
+	cout << chrono::duration_cast<chrono::microseconds>(fin_chrono - debut_chrono).count()
+			 << "secondes" << endl;
 }

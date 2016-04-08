@@ -15,21 +15,18 @@ BINROOT=/comptes/goualard-f/local/bin
 COMMON_SOURCES = interval.cpp minimizer.cpp functions.cpp
 COMMON_OBJECTS = $(COMMON_SOURCES:.cpp=.o)
 
-CXXFLAGS = -std=gnu++0x -Wall -fopenmp -I/comptes/goualard-f/local/include
+CXXFLAGS = -std=gnu++0x -Wall -fopenmp -I/comptes/goualard-f/local/include -fopenmp
 
 MPICXX = $(BINROOT)/mpic++
 
 
-all: optimization-seq optimization-mpi optimization-omp
+all: optimization-seq optimization-omp
 
 optimization-seq: optimization-seq.cpp $(COMMON_OBJECTS)
 	$(CXX) $(CXXFLAGS) -o $@ $< $(COMMON_OBJECTS) -lm
 
-optimization-mpi: optimization-mpi.cpp $(COMMON_OBJECTS)
-	$(MPICXX) $(CXXFLAGS) -fopenmp -o $@ $< $(COMMON_OBJECTS) -lm
-
 optimization-omp: optimization-omp.cpp $(COMMON_OBJECTS)
-		$(CXX) $(CXXFLAGS) -o $@ $< $(COMMON_OBJECTS) -lm
+	$(CXX) $(CXXFLAGS) -o $@ $< $(COMMON_OBJECTS) -lm
 
 $(COMMON_OBJECTS): %.o: %.cpp %.h
 
