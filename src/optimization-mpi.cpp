@@ -4,7 +4,7 @@
 
   Sequential version
 
-  Author: Frederic Goualard <Frederic.Goualard@univ-nantes.fr>
+  Author: Joachim Clayton robert.clayton@univ-nantes.fr>
   v. 1.0, 2013-02-15
 */
 
@@ -90,7 +90,10 @@ int main(int argc, char*argv[])
 	MPI_Comm_size(MPI_COMM_WORLD, &numprocs);
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 	MPI_Get_processor_name(processor_name, &namelen);
+	MPI_Status status;
 
+
+	
 	cout << "Process" << rank << " on "
 			 << processor_name << " out of " << numprocs << endl;
 

@@ -4,7 +4,7 @@
 
 	MPI version
 
-  Author: Joachim Clayton <Robert.Clayton@univ-nantes.fr>
+  Author: Joachim Clayton <robert.clayton@univ-nantes.fr>
   v. 1.0, 2016-02-09
 */
 
